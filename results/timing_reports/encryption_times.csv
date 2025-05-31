@@ -1,0 +1,3 @@
+trial,avg_selective_time,avg_full_time,faster_method,percentage_difference
+1,0.00106,0.00235,Selective,54.94%
+2,0.00066,0.00208,Selective,68.16%
