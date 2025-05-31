@@ -1,4 +1,4 @@
-# Selective-Encryption# 🧠 Selective Encryption for Medical Images (ACDC Cardiac MRI)
+# Selective-Encryption Selective Encryption for Medical Images (ACDC Cardiac MRI)
 
 This project applies **selective encryption** to cardiac MRI data from the **ACDC dataset**, encrypting **regions of interest (ROI)** using **AES** and **non-ROI** using **ChaCha20**, then compares the performance to full AES encryption of the entire image.
 
