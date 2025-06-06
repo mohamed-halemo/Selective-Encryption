@@ -14,25 +14,6 @@ from encryption import aes_encrypt, chacha20_encrypt
 from config import AES_KEY, IV, CHACHA_KEY
 
 
-def process_patient_folder(base_dir, output_dir=None):
-    """
-    Process all patient folders inside a dataset directory.
-    Returns all selective and full encryption times.
-    """
-    all_selective_times = []
-    all_full_times = []
-
-    for patient_id in sorted(os.listdir(base_dir)):
-        patient_path = os.path.join(base_dir, patient_id)
-        if not os.path.isdir(patient_path):
-            continue
-
-        selective_times, full_times = process_single_patient(patient_path, patient_id, output_dir)
-        all_selective_times.extend(selective_times)
-        all_full_times.extend(full_times)
-
-    return all_selective_times, all_full_times
-
 
 def process_single_patient(patient_path, patient_id, output_dir=None):
     """

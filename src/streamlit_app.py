@@ -51,7 +51,7 @@ if run_button:
         st.write(f"Processing")
 
         for pid in patients_to_process:
-            sel_times, full_times = process_single_patient(os.path.join(BASE_DIR, pid), pid, OUTPUT_DIR)
+            sel_times, full_times = process_single_patient(os.path.join(BASE_DIR, pid), pid)
             all_selective_times.extend(sel_times)
             all_full_times.extend(full_times)
 
