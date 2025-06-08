@@ -1,31 +1,54 @@
-# Selective-Encryption Selective Encryption for Medical Images (ACDC Cardiac MRI)
+# 🛡️ Selective Encryption for Medical Images (ACDC Cardiac MRI)
 
-This project applies **selective encryption** to cardiac MRI data from the **ACDC dataset**, encrypting **regions of interest (ROI)** using **AES** and **non-ROI** using **ChaCha20**, then compares the performance to full AES encryption of the entire image.
-
----
-
-
-
-## 🔍 Objective
-
-- **Selective encryption** aims to protect only the most sensitive regions (e.g., myocardium, LV, RV) of medical images to reduce computational cost while preserving privacy.
-- **Full AES encryption** is used as a baseline for comparison.
-- The project compares **encryption time** between selective and full approaches.
+This project implements **selective encryption** on cardiac MRI volumes from the **ACDC dataset**, where **regions of interest (ROIs)** (e.g., myocardium, left ventricle, right ventricle) are encrypted using **AES**, while **non-ROI regions** are encrypted using **ChaCha20**. The performance is compared to full AES encryption of the entire image.
 
 ---
 
-## 🛠️ How It Works
+## 🎯 Objective
 
-1. Load 3D cardiac MRI volumes and their corresponding segmentation masks.
-2. Identify ROI using label values (e.g., 1: LV, 2: RV, 3: Myocardium).
-3. Encrypt ROI voxels with **AES (CBC mode)** and non-ROI voxels with **ChaCha20**.
-4. Optionally save encrypted volumes to disk.
-5. Record and compare encryption times for:
-   - Full AES encryption
-   - Selective AES + ChaCha20 encryption
+- Enhance **privacy** in medical imaging while reducing **computational overhead**.
+- Encrypt only sensitive **ROI labels** (1: LV, 2: RV, 3: Myocardium) with **AES**.
+- Use **ChaCha20** for non-ROI to maintain performance.
+- Compare **encryption time** between selective encryption and full AES encryption.
 
 ---
 
-Developed by Mohamed Hafez, Biomedical & AI Engineer
+## ⚙️ How It Works
 
-Inspired by the need for privacy-preserving medical imaging and performance-efficient encryption schemes.
+1. Load 3D cardiac MRI volumes and corresponding ground-truth segmentation masks.
+2. Identify ROIs based on mask labels.
+3. Apply:
+   - **AES (CBC mode)** to encrypt ROI voxels.
+   - **ChaCha20** stream cipher for non-ROI voxels.
+4. Optionally save encrypted volumes.
+5. Measure and compare:
+   - ⏱️ Full AES encryption time
+   - ⏱️ Selective AES + ChaCha20 encryption time
+
+---
+
+## 📊 Experimental Setup & Results
+
+- Experiments were conducted on **150 patients** and sometimes looped over patients more than once, using **both frames (frame01 and frame02)** for each patient.
+- The results, including encrypted outputs and timing logs, are saved in the `results/` directory.
+- The **selective encryption approach showed a 60–70% performance improvement** (faster encryption time) compared to full AES encryption, while maintaining ROI protection.
+
+---
+
+## ✅ Key Benefits
+
+- 🔒 **Privacy-preserving**: Encrypts only the medically relevant regions.
+- ⚡ **Faster performance**: Avoids full image encryption when unnecessary.
+- 📁 **Result tracking**: Timing logs and encrypted volumes are organized and saved.
+- 🧠 **Adaptable**: Easily extendable to other medical datasets with segmentation labels.
+
+---
+
+## 👨‍💻 Developed By
+
+**Mohamed Hafez**  
+Researcher & AI Engineer
+
+Inspired by real-world challenges in privacy-preserving AI for healthcare.
+
+---
