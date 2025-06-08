@@ -27,7 +27,7 @@ if selection_option == "Specific Patient":
 elif selection_option == "First N Patients":
     num_patients = st.number_input("Enter number of patients to process", min_value=1, max_value=len(patient_ids), step=1)
 
-num_runs = st.number_input("Number of runs (to average timings)", min_value=1, max_value=10, value=1, step=1)
+num_runs = st.number_input("Number of runs (to average timings)", min_value=1, max_value=40, value=1, step=1)
 
 run_button = st.button("Run Encryption Trial")
 
@@ -89,12 +89,9 @@ if run_button:
 
     # ===== Visualization of Selective Encryption on Sample Patient =====
     st.subheader("Sample Visualization from First Patient")
-    
     sample_pid = patients_to_process[0]
     frame = "frame01"
     image_path = os.path.join(BASE_DIR, sample_pid, f"{sample_pid}_{frame}.nii.gz")
     mask_path = os.path.join(BASE_DIR, sample_pid, f"{sample_pid}_{frame}_gt.nii.gz")
     fig=visualize_image(image_path,mask_path)
-    
-
     st.pyplot(fig)

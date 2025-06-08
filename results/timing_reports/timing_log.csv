@@ -40,3 +40,13 @@ trial,avg_selective_time,avg_full_time,faster_method,percentage_difference,num_p
 39,0.00107,0.00511,Selective,79.05%,1
 40,0.00131,0.0021,Selective,37.89%,1
 41,0.00085,0.00284,Selective,70.05%,10
+42,0.00242,0.0025,Selective,3.12%,1
+43,0.00062,0.00187,Selective,66.98%,750
+44,0.00069,0.00206,Selective,66.54%,1500
+45,0.00097,0.00219,Selective,55.65%,150
+46,0.00068,0.00205,Selective,66.54%,3000
+47,0.00051,0.00164,Selective,69.10%,150
+48,0.00061,0.00183,Selective,66.45%,100
+49,0.00059,0.00166,Selective,64.62%,100
+50,0.00067,0.00193,Selective,65.25%,150
+51,0.0005,0.00177,Selective,71.94%,150
