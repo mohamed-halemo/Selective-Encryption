@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from processing import log_avg, process_single_patient
 from utils import get_patient_ids
-from visualize import visualize_image
+from visualize_image import visualize_image
 BASE_DIR = "Data/Original"
 OUTPUT_DIR = "results/encrypted"
 LOG_FILE = "results/timing_reports/timing_log.csv"
