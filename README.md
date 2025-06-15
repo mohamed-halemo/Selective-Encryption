@@ -29,7 +29,7 @@ This project implements **selective encryption** on cardiac MRI volumes from the
 
 ## 📊 Experimental Setup & Results
 
-- Experiments were conducted on **150 patients** and sometimes looped over patients more than once, using **both frames (frame01 and frame02)** for each patient.
+- Experiments were conducted on **150 patients** dataset and sometimes looped over patients more than once, using **both frames (frame01 and frame02)** for each patient.
 - The results, including encrypted outputs and timing logs, are saved in the `results/` directory.
 - The **selective encryption approach showed a 60–70% performance improvement** (faster encryption time) compared to full AES encryption, while maintaining ROI protection.
 
