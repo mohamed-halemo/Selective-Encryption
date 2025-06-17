@@ -48,3 +48,7 @@ trial,avg_selective_time,avg_full_time,faster_method,percentage_difference,num_p
 47,0.00156,0.00207,Selective,24.68%,1
 48,0.00142,0.00258,Selective,44.87%,1
 49,0.00216,0.00458,Selective,52.94%,20
+50,0.00353,0.005,Selective,29.28%,1
+51,0.004,0.00786,Selective,49.06%,1
+52,0.00266,0.00579,Selective,54.01%,1
+53,0.00225,0.0071,Selective,68.35%,1
