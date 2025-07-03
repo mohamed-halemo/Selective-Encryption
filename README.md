@@ -27,6 +27,79 @@ This project implements **selective encryption** on cardiac MRI volumes from the
 
 ---
 
+## 🚀 Getting Started
+
+### 1. Installation
+Install all required dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Data Structure
+The code expects the following directory structure for input data:
+```
+Data/Original/
+  ├── patient001/
+  │     ├── patient001_frame01.nii.gz
+  │     ├── patient001_frame01_gt.nii.gz
+  │     └── ...
+  ├── patient002/
+  │     └── ...
+  └── ...
+```
+Each patient folder should contain `.nii.gz` images and corresponding `_gt.nii.gz` segmentation masks.
+
+### 3. Configuration
+- Encryption keys and IVs are generated randomly at runtime (see `src/config.py`).
+- No manual key setup is required for basic runs, but for reproducibility, you may want to set fixed keys in `src/config.py`.
+
+---
+
+## ⚙️ Running the Project
+
+### A. Batch Processing (Command Line)
+To process all patients and log timing results:
+```bash
+python src/main.py
+```
+- Results (timing, logs, encrypted images) are saved in the `results/` directory.
+
+### B. Interactive Web App (Streamlit)
+To launch the Streamlit app for selective encryption and visualization:
+```bash
+streamlit run src/streamlit_app.py
+```
+- Choose to process all, a specific, or the first N patients.
+- Run multiple trials for timing averages.
+- Visualize sample encrypted images and view timing results in a table.
+
+### C. Evaluating Security Metrics
+After encryption, you can quantitatively assess the security of the encrypted images using a suite of standard metrics:
+- **PSNR** (Peak Signal-to-Noise Ratio): Lower is better (more difference from original).
+- **Entropy**: Higher is better (more randomness).
+- **Correlation**: Closer to 0 is better (less similarity).
+- **NPCR** (Number of Pixels Change Rate): Higher is better (more pixels changed).
+- **UACI** (Unified Average Changing Intensity): Higher is better (greater intensity change).
+- **Chi-Square**: Higher is better (more uniform/random distribution).
+- **MAE** (Mean Absolute Error): Higher is better (greater difference).
+
+To run the evaluation and generate a CSV report:
+```bash
+python src/evaluate_security.py
+```
+- Results are saved to `results/security_metrics.csv`.
+- The script prints a summary of average metrics to the console for quick comparison between original, selective, and full encryption.
+
+---
+
+## 🖼️ Demonstration
+
+Below is a demonstration of the selective encryption process:
+
+![Demonstration of encryption](results/Demonstration.png)
+
+---
+
 ## 📊 Experimental Setup & Results
 
 - Experiments were conducted on **150 patients** dataset and sometimes looped over patients more than once, using **both frames (frame01 and frame02)** for each patient.
@@ -37,9 +110,9 @@ This project implements **selective encryption** on cardiac MRI volumes from the
 
 ## ✅ Key Benefits
 
-- 🔒 **Privacy-preserving**: Encrypts only the medically relevant regions.
-- ⚡ **Faster performance**: Avoids full image encryption when unnecessary.
-- 📁 **Result tracking**: Timing logs and encrypted volumes are organized and saved.
+- 🔒 **Privacy-preserving**: Heavily Encrypts only the medically relevant regions and light weight the rest.
+- ⚡ **Faster performance**: Avoids full AES image encryption when unnecessary.
+- 📁 **Result tracking**: Timing logs, security measures and encrypted volumes are organized and saved.
 - 🧠 **Adaptable**: Easily extendable to other medical datasets with segmentation labels.
 
 ---
