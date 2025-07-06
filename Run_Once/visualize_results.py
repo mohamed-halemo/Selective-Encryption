@@ -32,7 +32,7 @@ def load_and_prepare_data():
 
 def select_representative_trials(df):
     # Define target image counts we want to show
-    target_counts = [1, 10, 30, 60, 150, 300, 750, 1500, 3000]
+    target_counts = [10, 30, 50, 70, 90, 110, 130, 150]
     
     # Find the closest trial to each target count
     selected_trials = []
@@ -70,12 +70,12 @@ def create_patient_comparison_chart(df):
                        color='#e74c3c', alpha=0.8)
     
     # Add labels and title
-    plt.xlabel('Number of Images', fontsize=25, labelpad=10)
+    plt.xlabel('Patients Processed', fontsize=25, labelpad=10)
     plt.ylabel('Encryption Time (milliseconds)', fontsize=25, labelpad=10)
-    plt.title('Different Trials with Different Images', fontsize=30, pad=20)
+    plt.title('Time Comparison', fontsize=30, pad=20)
     
     # Add only image counts as x-tick labels
-    plt.xticks(x, [f'{int(df_subset.iloc[i]["num_processed"])} images' 
+    plt.xticks(x, [f'{int(df_subset.iloc[i]["num_processed"])} Patients' 
                    for i in range(len(df_subset))], rotation=45, fontsize=14)
     
     # Add legend with larger font
@@ -89,30 +89,30 @@ def create_patient_comparison_chart(df):
     plt.axis('off')  # Turn off axis
     
     # Add summary statistics in a table format
-    summary_data = [
-        ['Metric', 'Value'],
-        ['Average Selective Time', f"{df_subset['avg_selective_time'].mean():.2f} ms"],
-        ['Average Full AES Time', f"{df_subset['avg_full_time'].mean():.2f} ms"],
-        ['Mean Performance Improvement', f"{df_subset['percentage_difference'].mean():.1f}%"],
-        ['Total Images Processed', f"{df_subset['num_processed'].sum():,}"],
-        ['Average Images per Trial', f"{df_subset['num_processed'].mean():.1f}"]
-    ]
+    # summary_data = [
+    #     ['Metric', 'Value'],
+    #     ['Average Selective Time', f"{df_subset['avg_selective_time'].mean():.2f} ms"],
+    #     ['Average Full AES Time', f"{df_subset['avg_full_time'].mean():.2f} ms"],
+    #     ['Mean Performance Improvement', f"{df_subset['percentage_difference'].mean():.1f}%"],
+    #     ['Total Images Processed', f"{df_subset['num_processed'].sum():,}"],
+    #     ['Average Images per Trial', f"{df_subset['num_processed'].mean():.1f}"]
+    # ]
     
     # Create table with larger font
-    table = plt.table(cellText=summary_data,
-                     loc='center',
-                     cellLoc='center',
-                     colWidths=[0.6, 0.4])
+    # table = plt.table(
+    #                  loc='center',
+    #                  cellLoc='center',
+    #                  colWidths=[0.6, 0.4])
     
-    # Style the table
-    table.auto_set_font_size(False)
-    table.set_fontsize(14)  # Increased font size
-    table.scale(1, 1.5)
+    # # Style the table
+    # table.auto_set_font_size(False)
+    # table.set_fontsize(14)  # Increased font size
+    # table.scale(1, 1.5)
     
     # Style header row
-    for i in range(2):
-        table[(0, i)].set_facecolor('#404040')
-        table[(0, i)].set_text_props(color='white', weight='bold')
+    # for i in range(2):
+    #     table[(0, i)].set_facecolor('#404040')
+    #     table[(0, i)].set_text_props(color='white', weight='bold')
     
     # Adjust layout and save
     plt.tight_layout()
