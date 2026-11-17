@@ -1,6 +1,6 @@
 # Selective Encryption for Medical Images
 
-Code for **"Smart Encryption: A Novel Hybrid Approach to Selectively Encrypt Medical Images"**.
+Code for **"Smart Encryption: A Novel Hybrid Approach to Selectively Encrypt Medical Images"**, IEEE NoF 2025. [Paper](https://ieeexplore.ieee.org/abstract/document/11223323)
 
 Cardiac MRI volumes (ACDC) are split with the ground-truth masks: the heart (ROI) is encrypted with **AES-256-CBC**, the rest with **ChaCha20**. Compared to AES on the whole volume, this is about **60–70% faster** with the same statistical security metrics.
 
@@ -79,6 +79,17 @@ src/streamlit_app.py     demo UI
 tests/                   pytest
 ```
 
-## Authors
+## Citation
+
+```bibtex
+@inproceedings{hafez2025smart,
+  title     = {Smart Encryption: A Novel Hybrid Approach to Selectively Encrypt Medical Images},
+  author    = {Hafez, Mohamed and Lee, Hyon and Abdel Hafeez, Khalid},
+  booktitle = {2025 16th International Conference on Network of the Future (NoF)},
+  pages     = {235--242},
+  year      = {2025},
+  doi       = {10.1109/NoF66640.2025.11223323}
+}
+```
 
 Mohamed Hafez, Hyon Lee, Khalid Abdel Hafeez · Ontario Tech University
