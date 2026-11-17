@@ -1,84 +1,118 @@
-# src/processing.py
-
 import os
 import time
-import numpy as np
+
 import nibabel as nib
+import numpy as np
 
-from utils import (
-    normalize_to_uint8,
-    log_trial_average_timing_results,
-    save_encrypted_images,
-)
-from encryption import aes_encrypt, chacha20_encrypt
-from config import AES_KEY, IV, CHACHA_KEY
+from config import ROI_LABELS
+from encryption import (Keys, aes_encrypt, chacha20_encrypt, ciphertext_view, decrypt_volume,
+                        encrypt_full_aes, encrypt_volume, new_iv, new_nonce)
+from utils import log_trial_average_timing_results, normalize_to_uint8, save_nifti_image_from_array
 
 
+def load_frame(image_path, mask_path, keep_intensity=False):
+    """Load a volume and its ROI mask.
 
-def process_single_patient(patient_path, patient_id, output_dir=None):
+    keep_intensity=False -> 8-bit normalized volume (as in the paper).
+    keep_intensity=True  -> original stored values (lossless, exact decryption).
     """
-    Process a single patient folder and perform selective and full encryption.
+    img = nib.load(image_path)
+    volume = np.asanyarray(img.dataobj) if keep_intensity else normalize_to_uint8(img.get_fdata())
+    roi_mask = np.isin(nib.load(mask_path).get_fdata(), ROI_LABELS)
+    return np.ascontiguousarray(volume), roi_mask
+
+
+def time_frame(volume, roi_mask, keys, repeats=5, warmup=2):
+    """Time only the crypto calls (the ROI split is done once beforehand, as in the paper).
+
+    Returns mean seconds for (selective, full AES) over `repeats` runs.
     """
+    roi_bytes = volume[roi_mask].tobytes()
+    non_roi_bytes = volume[~roi_mask].tobytes()
+    full_bytes = volume.tobytes()
+
+    def selective():
+        iv, nonce = new_iv(), new_nonce()
+        t = time.perf_counter()
+        aes_encrypt(roi_bytes, keys.aes_key, iv)
+        chacha20_encrypt(non_roi_bytes, keys.chacha_key, nonce)
+        return time.perf_counter() - t
+
+    def full():
+        iv = new_iv()
+        t = time.perf_counter()
+        aes_encrypt(full_bytes, keys.aes_key, iv)
+        return time.perf_counter() - t
+
+    for _ in range(warmup):
+        selective(), full()
+    sel = [selective() for _ in range(repeats)]
+    ful = [full() for _ in range(repeats)]
+    return float(np.mean(sel)), float(np.mean(ful))
+
+
+def list_frames(patient_path):
+    return sorted(f for f in os.listdir(patient_path)
+                  if f.endswith(".nii.gz") and "4d" not in f and not f.endswith("_gt.nii.gz"))
+
+
+def process_single_patient(patient_path, patient_id, keys, output_dir=None,
+                           repeats=5, keep_intensity=False, verify=True):
     selective_times, full_times = [], []
 
-    frame_files = [f for f in os.listdir(patient_path)
-                   if f.endswith('.nii.gz') and "4d" not in f and not f.endswith("_gt.nii.gz")]
-
-    for frame_file in sorted(frame_files):
+    for frame_file in list_frames(patient_path):
         frame_name = frame_file.replace(".nii.gz", "")
-        mask_file = f"{frame_name}_gt.nii.gz"
-        mask_path = os.path.join(patient_path, mask_file)
         image_path = os.path.join(patient_path, frame_file)
-
+        mask_path = os.path.join(patient_path, f"{frame_name}_gt.nii.gz")
         if not os.path.exists(mask_path):
             print(f"  Mask not found for {frame_file}, skipping...")
             continue
 
-        # Load image and mask
-        image = nib.load(image_path).get_fdata()
-        mask = nib.load(mask_path).get_fdata()
-        img_uint8 = normalize_to_uint8(image)
+        volume, roi_mask = load_frame(image_path, mask_path, keep_intensity)
 
-        # Create ROI and non-ROI masks
-        roi_mask = np.isin(mask, [1, 2, 3])
-        non_roi_mask = ~roi_mask
+        sel_t, full_t = time_frame(volume, roi_mask, keys, repeats=repeats)
+        selective_times.append(sel_t)
+        full_times.append(full_t)
 
-        roi_pixels = img_uint8[roi_mask]
-        non_roi_pixels = img_uint8[non_roi_mask]
-
-        # --- Selective Encryption ---
-        start_sel = time.time()
-
-        encrypted_roi_bytes = aes_encrypt(roi_pixels.tobytes(), AES_KEY, IV)
-        encrypted_roi_pixels = np.frombuffer(encrypted_roi_bytes[:len(roi_pixels)], dtype=np.uint8)
-
-        nonce = os.urandom(16)
-        encrypted_non_roi_bytes = chacha20_encrypt(non_roi_pixels.tobytes(), CHACHA_KEY, nonce)
-        encrypted_non_roi_pixels = np.frombuffer(encrypted_non_roi_bytes, dtype=np.uint8)
-
-        selective_time = time.time() - start_sel
-        selective_times.append(selective_time)
-
-        # --- Full AES Encryption ---
-        start_full = time.time()
-        flat_img = img_uint8.flatten()
-        full_encrypted = aes_encrypt(flat_img.tobytes(), AES_KEY, IV)
-        full_img = np.frombuffer(full_encrypted[:len(flat_img)], dtype=np.uint8).reshape(img_uint8.shape)
-        full_time = time.time() - start_full
-        full_times.append(full_time)
-
-        # Save images if output directory is provided
-        if output_dir:
-            save_encrypted_images(
-                patient_id, frame_name, img_uint8, roi_mask, non_roi_mask,
-                encrypted_roi_pixels, encrypted_non_roi_pixels, full_img,
-                image_path, output_dir
-            )
+        if verify or output_dir:
+            enc = encrypt_volume(volume, roi_mask, keys)
+            if verify:
+                assert np.array_equal(decrypt_volume(enc, roi_mask, keys), volume), \
+                    f"Round trip failed for {frame_name}"
+            if output_dir:
+                save_outputs(patient_id, frame_name, volume, roi_mask, enc, keys, image_path, output_dir)
 
     return selective_times, full_times
 
+
+def save_outputs(patient_id, frame_name, volume, roi_mask, enc, keys, reference_path, output_dir):
+    """Save the decryptable ciphertext (.npz) plus uint8 NIfTI views for inspection/metrics."""
+    stem = f"{patient_id}_{frame_name}"
+    enc.save(os.path.join(output_dir, "selective", f"{stem}_selective_enc.npz"))
+    save_nifti_image_from_array(enc.view(roi_mask), reference_path,
+                                os.path.join(output_dir, "selective", f"{stem}_selective_enc.nii.gz"))
+
+    full_ct, _ = encrypt_full_aes(volume, keys.aes_key)
+    save_nifti_image_from_array(ciphertext_view(full_ct, volume.shape), reference_path,
+                                os.path.join(output_dir, "full", f"{stem}_full_enc.nii.gz"))
+
+
+def get_patient_ids(base_dir):
+    return [f for f in sorted(os.listdir(base_dir)) if os.path.isdir(os.path.join(base_dir, f))]
+
+
+def process_patient_folder(base_dir, keys, output_dir=None, repeats=5, keep_intensity=False,
+                           verify=True, limit=None):
+    all_sel, all_full = [], []
+    ids = get_patient_ids(base_dir)[:limit] if limit else get_patient_ids(base_dir)
+    for pid in ids:
+        print(f"Processing {pid}...")
+        sel, full = process_single_patient(os.path.join(base_dir, pid), pid, keys, output_dir,
+                                           repeats, keep_intensity, verify)
+        all_sel.extend(sel)
+        all_full.extend(full)
+    return all_sel, all_full
+
+
 def log_avg(log_file, avg_selective, avg_full, num_processed):
-    """
-    Wrapper to log timing results and return the logged row.
-    """
     return log_trial_average_timing_results(log_file, avg_selective, avg_full, num_processed)

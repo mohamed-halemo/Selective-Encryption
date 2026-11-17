@@ -36,7 +36,7 @@ def image_entropy(img):
     
     Formula: -sum(p * log2(p)) where p is probability of each pixel value
     """
-    hist, _ = np.histogram(img.flatten(), bins=256, range=(0, 255), density=True)
+    hist = np.bincount(img.astype(np.uint8).ravel(), minlength=256) / img.size
     hist = hist[hist > 0]
     return -np.sum(hist * np.log2(hist))
 
@@ -118,19 +118,40 @@ def uaci(img1, img2):
 def chi_square(img):
     """
     Chi-Square Test for Uniformity
-    
-    Tests whether pixel values are uniformly distributed (random).
-    Higher chi-square values indicate more uniform distribution (better encryption).
-    
-    Range: 0 to infinity
-    - 0: Perfect uniformity (all pixel values equally likely)
-    - Higher values: More uniform distribution
-    - Original images: Lower values (structured, non-uniform)
-    - Well-encrypted images: Higher values (uniform, random-like)
-    
+
+    Tests whether pixel values are uniformly distributed over 0..255.
+    LOWER is better for encrypted images (closer to uniform).
+
+    - Ideal ciphertext: about 255 (degrees of freedom); below 293.25 passes at the 5% level
+    - Original images: very large values (structured, non-uniform)
+
     Formula: sum((observed - expected)^2 / expected)
     """
-    hist, _ = np.histogram(img.flatten(), bins=256, range=(0, 255))
-    expected = np.ones(256) * np.mean(hist)
+    hist = np.bincount(img.astype(np.uint8).ravel(), minlength=256)
+    expected = np.full(256, img.size / 256)
     chi2, _ = chisquare(hist, expected)
-    return chi2 
+    return chi2
+
+
+def adjacent_correlation(img, axis=0):
+    """
+    Correlation between neighbouring pixels along one axis (horizontal/vertical).
+    Close to 1 for natural images, close to 0 for good ciphertext.
+    """
+    a = np.moveaxis(img.astype(np.float64), axis, 0)
+    return np.corrcoef(a[:-1].ravel(), a[1:].ravel())[0, 1]
+
+
+def differential_npcr_uaci(encrypt_fn, img, rng=None):
+    """
+    Classic differential test: flip one pixel, encrypt both images with the
+    same key, and compare the two CIPHERTEXTS (not original vs ciphertext).
+    encrypt_fn(img) -> uint8 array of the same shape.
+    Returns (NPCR %, UACI %).
+    """
+    rng = rng or np.random.default_rng(0)
+    img2 = img.copy()
+    idx = tuple(int(rng.integers(0, s)) for s in img.shape)
+    img2[idx] = (int(img2[idx]) + 1) % 256
+    c1, c2 = encrypt_fn(img), encrypt_fn(img2)
+    return npcr(c1, c2), uaci(c1, c2)

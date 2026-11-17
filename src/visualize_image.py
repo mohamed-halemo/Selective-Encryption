@@ -1,4 +1,5 @@
-from encryption import chacha20_encrypt,aes_encrypt
+from encryption import Keys, encrypt_volume
+from utils import normalize_to_uint8
 import nibabel as nib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,33 +9,12 @@ def visualize_image(image_path,mask_path):
     image = nib.load(image_path).get_fdata()
     mask = nib.load(mask_path).get_fdata()
 
-    img_min, img_max = image.min(), image.max()
-    img_uint8 = ((image - img_min) / (img_max - img_min) * 255).astype(np.uint8)
+    img_uint8 = normalize_to_uint8(image)
 
     roi_mask = np.isin(mask, [1, 2, 3])
-    non_roi_mask = ~roi_mask
-
-    # Prepare keys and nonce
-    aes_key = os.urandom(32)
-    iv = os.urandom(16)
-    chacha_key = os.urandom(32)
-    nonce = os.urandom(16)
-
-    # Extract pixels
-    roi_pixels = img_uint8[roi_mask]
-    non_roi_pixels = img_uint8[non_roi_mask]
-
-    # Encrypt ROI pixels (AES)
-    encrypted_roi_bytes = aes_encrypt(roi_pixels.tobytes(), aes_key, iv)
-    encrypted_roi_pixels = np.frombuffer(encrypted_roi_bytes[:len(roi_pixels)], dtype=np.uint8)
-
-    # Encrypt non-ROI pixels (ChaCha20)
-    encrypted_non_roi_bytes = chacha20_encrypt(non_roi_pixels.tobytes(), chacha_key, nonce)
-    encrypted_non_roi_pixels = np.frombuffer(encrypted_non_roi_bytes[:len(non_roi_pixels)], dtype=np.uint8)
-
-    selective_img = img_uint8.copy()
-    selective_img[roi_mask] = encrypted_roi_pixels
-    selective_img[non_roi_mask] = encrypted_non_roi_pixels
+    enc = encrypt_volume(img_uint8, roi_mask, Keys.generate())
+    selective_img = enc.view(roi_mask)
+    encrypted_roi_pixels = selective_img[roi_mask]
 
     # ROI-only encrypted image for comparison
     roi_only_img = img_uint8.copy()

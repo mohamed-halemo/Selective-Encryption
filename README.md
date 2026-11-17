@@ -1,127 +1,84 @@
-# 🛡️ Selective Encryption for Medical Images (ACDC Cardiac MRI)
+# Selective Encryption for Medical Images
 
-This project implements **selective encryption** on cardiac MRI volumes from the **ACDC dataset**, where **regions of interest (ROIs)** (e.g., myocardium, left ventricle, right ventricle) are encrypted using **AES**, while **non-ROI regions** are encrypted using **ChaCha20**. The performance is compared to full AES encryption of the entire image.
+Code for **"Smart Encryption: A Novel Hybrid Approach to Selectively Encrypt Medical Images"**.
 
----
+Cardiac MRI volumes (ACDC) are split with the ground-truth masks: the heart (ROI) is encrypted with **AES-256-CBC**, the rest with **ChaCha20**. Compared to AES on the whole volume, this is about **60–70% faster** with the same statistical security metrics.
 
-## 🎯 Objective
+<p align="center">
+  <img src="results/Demonstration.png" width="90%" alt="Original, ROI, and selectively encrypted MRI slice">
+</p>
 
-- Enhance **privacy** in medical imaging while reducing **computational overhead**.
-- Encrypt only sensitive **ROI labels** (1: LV, 2: RV, 3: Myocardium) with **AES**.
-- Use **ChaCha20** for non-ROI to maintain performance.
-- Compare **encryption time** between selective encryption and full AES encryption.
+## How it works
 
----
+1. Load a 3D NIfTI volume and its mask. ROI = labels 1, 2, 3 (RV, myocardium, LV).
+2. Normalize to 8 bits (paper setup), or keep the original values with `--keep-intensity`.
+3. Encrypt ROI voxels with AES-256-CBC (PKCS7), the rest with ChaCha20. Fresh random IV and nonce for every volume.
+4. Store the full ciphertext + IV + nonce, so every volume decrypts back exactly.
 
-## ⚙️ How It Works
+## Run it
 
-1. Load 3D cardiac MRI volumes and corresponding ground-truth segmentation masks.
-2. Identify ROIs based on mask labels.
-3. Apply:
-   - **AES (CBC mode)** to encrypt ROI voxels.
-   - **ChaCha20** stream cipher for non-ROI voxels.
-4. Optionally save encrypted volumes.
-5. Measure and compare:
-   - ⏱️ Full AES encryption time
-   - ⏱️ Selective AES + ChaCha20 encryption time
-
----
-
-## 🚀 Getting Started
-
-### 1. Installation
-Install all required dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Data Structure
-The code expects the following directory structure for input data:
-```
-Data/Original/
-  ├── patient001/
-  │     ├── patient001_frame01.nii.gz
-  │     ├── patient001_frame01_gt.nii.gz
-  │     └── ...
-  ├── patient002/
-  │     └── ...
-  └── ...
-```
-Each patient folder should contain `.nii.gz` images and corresponding `_gt.nii.gz` segmentation masks.
+Put ACDC under `Data/Original/patientXXX/` (`patientXXX_frameYY.nii.gz` + `_gt.nii.gz`). The data is not included, get it from the [ACDC challenge](https://www.creatis.insa-lyon.fr/Challenge/acdc/).
 
-### 3. Configuration
-- Encryption keys and IVs are generated randomly at runtime (see `src/config.py`).
-- No manual key setup is required for basic runs, but for reproducibility, you may want to set fixed keys in `src/config.py`.
-
----
-
-## ⚙️ Running the Project
-
-### A. Batch Processing (Command Line)
-To process all patients and log timing results:
 ```bash
-python src/main.py
+cd src
+python main.py                                   # timing: selective vs full AES (paper setup)
+python main.py --keep-intensity                  # lossless, original voxel values
+python main.py --out ../results/encrypted --save-keys   # also save encrypted volumes + keys
+cd .. && python src/evaluate_security.py         # entropy, correlation, NPCR, UACI, PSNR, MAE, chi-square
+streamlit run src/streamlit_app.py               # interactive demo
 ```
-- Results (timing, logs, encrypted images) are saved in the `results/` directory.
 
-### B. Interactive Web App (Streamlit)
-To launch the Streamlit app for selective encryption and visualization:
+Every run checks that each volume decrypts back to the original (`--no-verify` to skip).
+
+## Results (paper)
+
+| Volumes | Selective (ms) | Full AES (ms) | Gain |
+|---:|---:|---:|---:|
+| 300 | 0.50 | 1.60 | 69.1% |
+| 1500 | 0.60 | 1.90 | 67.0% |
+| 3000 | 0.70 | 2.10 | 66.5% |
+
+| | Entropy | Corr. | NPCR | UACI | MAE | PSNR |
+|---|---:|---:|---:|---:|---:|---:|
+| Original | 6.37 | 1.000 | – | – | – | – |
+| Selective | 7.98 | 0.0001 | 99.61% | 39.92% | 101.81 | 6.35 |
+| Full AES | 7.98 | 0.0001 | 99.61% | 39.92% | 101.80 | 6.35 |
+
+Timing covers the encryption calls only (the ROI split is a one-time indexing step). Absolute numbers depend on the CPU.
+
+<p align="center"><img src="results/patient_comparison.png" width="90%" alt="Per-patient timing"></p>
+
+## Tests
+
 ```bash
-streamlit run src/streamlit_app.py
+pytest -q
 ```
-- Choose to process all, a specific, or the first N patients.
-- Run multiple trials for timing averages.
-- Visualize sample encrypted images and view timing results in a table.
 
-### C. Evaluating Security Metrics
-After encryption, you can quantitatively assess the security of the encrypted images using a suite of standard metrics:
-- **PSNR** (Peak Signal-to-Noise Ratio): Lower is better (more difference from original).
-- **Entropy**: Higher is better (more randomness).
-- **Correlation**: Closer to 0 is better (less similarity).
-- **NPCR** (Number of Pixels Change Rate): Higher is better (more pixels changed).
-- **UACI** (Unified Average Changing Intensity): Higher is better (greater intensity change).
-- **Chi-Square**: Higher is better (more uniform/random distribution).
-- **MAE** (Mean Absolute Error): Higher is better (greater difference).
+Round trip for uint8 / int16 / float32 volumes, fresh IV and nonce per call, wrong-key failure, save/load, and metric sanity checks.
 
-To run the evaluation and generate a CSV report:
-```bash
-python src/evaluate_security.py
+## Notes
+
+- The 8-bit setup is lossy by design. Use `--keep-intensity` when the exact original values matter.
+- The ROI comes from existing segmentation masks. Volumes without a mask are skipped.
+- Keys are random per run. Use `--save-keys` / `--keys` to decrypt later, and keep `keys.json` private.
+- Research code, not a certified clinical tool.
+
+## Structure
+
 ```
-- Results are saved to `results/security_metrics.csv`.
-- The script prints a summary of average metrics to the console for quick comparison between original, selective, and full encryption.
+src/encryption.py        AES / ChaCha20, encrypt + decrypt volumes, keys
+src/processing.py        loading, timing, per-patient pipeline
+src/main.py              CLI
+src/metrics.py           security metrics
+src/evaluate_security.py metrics over saved outputs
+src/streamlit_app.py     demo UI
+tests/                   pytest
+```
 
----
+## Authors
 
-## 🖼️ Demonstration
-
-Below is a demonstration of the selective encryption process:
-
-![Demonstration of encryption](results/Demonstration.png)
-
----
-
-## 📊 Experimental Setup & Results
-
-- Experiments were conducted on **150 patients** dataset and sometimes looped over patients more than once, using **both frames (frame01 and frame02)** for each patient.
-- The results, including encrypted outputs and timing logs, are saved in the `results/` directory.
-- The **selective encryption approach showed a 60–70% performance improvement** (faster encryption time) compared to full AES encryption, while maintaining ROI protection.
-
----
-
-## ✅ Key Benefits
-
-- 🔒 **Privacy-preserving**: Heavily Encrypts only the medically relevant regions and light weight the rest.
-- ⚡ **Faster performance**: Avoids full AES image encryption when unnecessary.
-- 📁 **Result tracking**: Timing logs, security measures and encrypted volumes are organized and saved.
-- 🧠 **Adaptable**: Easily extendable to other medical datasets with segmentation labels.
-
----
-
-## 👨‍💻 Developed By
-
-**Mohamed Hafez**  
-Researcher & AI Engineer
-
-Inspired by real-world challenges in privacy-preserving AI for healthcare.
-
----
+Mohamed Hafez, Hyon Lee, Khalid Abdel Hafeez · Ontario Tech University

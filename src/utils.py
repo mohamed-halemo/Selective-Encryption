@@ -4,7 +4,10 @@ import os
 import nibabel as nib
 
 def normalize_to_uint8(image):
-    img_min, img_max = image.min(), image.max()
+    """Min-max scale to [0, 255]. Lossy: use --keep-intensity for exact values."""
+    img_min, img_max = float(image.min()), float(image.max())
+    if img_max == img_min:
+        return np.zeros(image.shape, dtype=np.uint8)
     return ((image - img_min) / (img_max - img_min) * 255).astype(np.uint8)
 def log_trial_average_timing_results(log_path, avg_selective_time, avg_full_time, num_processed):
     """
@@ -52,31 +55,12 @@ def save_nifti_image_from_array(data_uint8, reference_nii_path, save_path):
     Save a uint8 NumPy array as a NIfTI image using the affine and header from a reference file.
     """
     ref_img = nib.load(reference_nii_path)
-    new_img = nib.Nifti1Image(data_uint8, affine=ref_img.affine, header=ref_img.header)
+    header = ref_img.header.copy()
+    header.set_data_dtype(np.uint8)
+    header.set_slope_inter(1, 0)
+    new_img = nib.Nifti1Image(data_uint8, affine=ref_img.affine, header=header)
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     nib.save(new_img, save_path)
-
-def save_encrypted_images(
-    patient_id, frame_name, img_uint8, roi_mask, non_roi_mask,
-    encrypted_roi_pixels, encrypted_non_roi_pixels, full_img,
-    reference_nii_path, output_dir
-):
-    """
-    Save both selective and full encrypted images to disk.
-    """
-    selective_img = np.copy(img_uint8)
-    selective_img[roi_mask] = encrypted_roi_pixels
-    selective_img[non_roi_mask] = encrypted_non_roi_pixels
-
-    selective_dir = os.path.join(output_dir, "selective")
-    full_dir = os.path.join(output_dir, "full")
-
-    selective_path = os.path.join(selective_dir, f"{patient_id}_{frame_name}_selective_enc.nii.gz")
-    full_path = os.path.join(full_dir, f"{patient_id}_{frame_name}_full_enc.nii.gz")
-
-    save_nifti_image_from_array(selective_img, reference_nii_path, selective_path)
-    save_nifti_image_from_array(full_img, reference_nii_path, full_path)
-
 
 def get_patient_ids(base_dir):
     """Return list of patient folder names (directories) inside base_dir."""

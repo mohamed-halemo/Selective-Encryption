@@ -1,10 +1,8 @@
-import os
-from cryptography.hazmat.backends import default_backend
+# ACDC labels: 1 = right ventricle, 2 = myocardium, 3 = left ventricle cavity.
+# All three together are the ROI.
+ROI_LABELS = (1, 2, 3)
 
-# AES Setup
-AES_KEY = os.urandom(32)
-IV = os.urandom(16)
-BACKEND = default_backend()
-
-# ChaCha20 Setup
-CHACHA_KEY = os.urandom(32)  # 256-bit key
+DATA_DIR = "../Data/Original"
+OUTPUT_DIR = "../results/encrypted"
+KEYS_PATH = "../results/keys.json"
+TIMING_LOG = "../results/timing_reports/encryption_times.csv"

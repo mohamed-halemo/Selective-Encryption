@@ -2,7 +2,8 @@ import os
 import csv
 import numpy as np
 import nibabel as nib
-from metrics import psnr, image_entropy, correlation_coefficient, npcr, uaci, chi_square, mae
+from metrics import psnr, image_entropy, correlation_coefficient, npcr, uaci, chi_square, mae, adjacent_correlation
+from utils import normalize_to_uint8
 
 def get_original_path(patient_id, frame_name):
     return os.path.join('Data/Original', patient_id, f'{patient_id}_{frame_name}.nii.gz')
@@ -15,10 +16,6 @@ def get_selective_path(patient_id, frame_name):
 
 def get_full_path(patient_id, frame_name):
     return os.path.join('results/encrypted/full', f'{patient_id}_{patient_id}_{frame_name}_full_enc.nii.gz')
-
-def normalize_to_uint8(image):
-    img_min, img_max = image.min(), image.max()
-    return ((image - img_min) / (img_max - img_min) * 255).astype(np.uint8)
 
 def calculate_averages(results):
     """Calculate averages for each encryption type"""
@@ -41,6 +38,7 @@ def calculate_averages(results):
             'uaci': np.mean([r['uaci'] for r in type_results]),
             'chi2': np.mean([r['chi2'] for r in type_results]),
             'mae': np.mean([r['mae'] for r in type_results]),
+            'adj_corr': np.mean([r['adj_corr'] for r in type_results]),
         }
         
         # Calculate PSNR average only for selective and full (skip '-' values)
@@ -86,6 +84,7 @@ def evaluate_all():
             'uaci': 0.0,  # No change
             'chi2': chi_square(orig_uint8),
             'mae': 0.0,  # No change
+            'adj_corr': adjacent_correlation(orig_uint8),
         }
         # Metrics for selective
         row_sel = {
@@ -99,6 +98,7 @@ def evaluate_all():
             'uaci': uaci(orig_uint8, sel_uint8),
             'chi2': chi_square(sel_uint8),
             'mae': mae(orig_uint8, sel_uint8),
+            'adj_corr': adjacent_correlation(sel_uint8),
         }
         # Metrics for full
         row_full = {
@@ -112,6 +112,7 @@ def evaluate_all():
             'uaci': uaci(orig_uint8, full_uint8),
             'chi2': chi_square(full_uint8),
             'mae': mae(orig_uint8, full_uint8),
+            'adj_corr': adjacent_correlation(full_uint8),
         }
         results.append(row_orig)
         results.append(row_sel)
@@ -122,9 +123,9 @@ def evaluate_all():
     
     # Write to CSV with range info as a comment row
     out_path = 'results/security_metrics.csv'
-    header = ['patient','frame','type','psnr','entropy','corr','npcr','uaci','chi2','mae']
+    header = ['patient','frame','type','psnr','entropy','corr','npcr','uaci','chi2','mae','adj_corr']
     # Ranges: PSNR: [0, inf], Entropy: [0, 8], Corr: [-1, 1], NPCR: [0, 100], UACI: [0, 100], Chi2: [0, inf], MAE: [0, 255]
-    range_comment = ['# Ranges:', '', '', 'PSNR[0,inf]', 'Entropy[0,8]', 'Corr[-1,1]', 'NPCR[0,100]', 'UACI[0,100]', 'Chi2[0,inf]', 'MAE[0,255]']
+    range_comment = ['# Ranges:', '', '', 'PSNR[0,inf]', 'Entropy[0,8]', 'Corr[-1,1]', 'NPCR[0,100]', 'UACI[0,100]', 'Chi2[0,inf]', 'MAE[0,255]', 'AdjCorr[-1,1]']
     
     with open(out_path, 'w', newline='') as f:
         writer = csv.writer(f)
@@ -159,6 +160,7 @@ def evaluate_all():
             print(f"  UACI: {avg['uaci']:.2f}%")
             print(f"  Chi-Square: {avg['chi2']:.2f}")
             print(f"  MAE: {avg['mae']:.2f}")
+            print(f"  Adjacent-pixel correlation: {avg['adj_corr']:.4f}")
             if avg['psnr'] != '-':
                 print(f"  PSNR: {avg['psnr']:.2f}")
 

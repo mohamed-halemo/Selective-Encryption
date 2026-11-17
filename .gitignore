@@ -1,22 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+
+# data and outputs
 /Data
 /results/encrypted
+/results/decrypted
+/results/keys.json
+*.nii
+*.nii.gz
+*.npz
+
+# local scratch
 Heart.py
 Heart2.py
 clean_up.py
-src/__pycache__/visualize_image.cpython-311.pyc
-src/__pycache__/processing.cpython-311.pyc
-src/__pycache__/processing.cpython-311.pyc
-src/__pycache__/utils.cpython-311.pyc
-src/__pycache__/decryption.cpython-311.pyc
-src/__pycache__/processing.cpython-311.pyc
-src/__pycache__/utils.cpython-311.pyc
-src/__pycache__/processing.cpython-311.pyc
-results/decrypted/patient001_frame12_decrypted.nii.gz
-src/__pycache__/processing.cpython-311.pyc
-src/__pycache__/utils.cpython-311.pyc
-src/__pycache__/processing.cpython-311.pyc
-src/__pycache__/processing.cpython-311.pyc
-src/__pycache__/processing.cpython-311.pyc
-src/__pycache__/utils.cpython-311.pyc
-src/__pycache__/utils.cpython-311.pyc
-src/__pycache__/utils.cpython-311.pyc

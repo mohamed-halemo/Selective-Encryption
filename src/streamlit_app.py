@@ -1,14 +1,17 @@
 import streamlit as st
 import os
 import pandas as pd
-from processing import log_avg, process_single_patient
-from utils import get_patient_ids
+from encryption import Keys
+from processing import get_patient_ids, log_avg, process_single_patient
 from visualize_image import visualize_image
 BASE_DIR = "Data/Original"
 OUTPUT_DIR = "results/encrypted"
 LOG_FILE = "results/timing_reports/timing_log.csv"
 
 st.title("Selective Encryption of Medical Images")
+
+if "keys" not in st.session_state:
+    st.session_state.keys = Keys.generate()
 
 # Load patient IDs
 patient_ids = get_patient_ids(BASE_DIR)
@@ -51,7 +54,7 @@ if run_button:
             patients_to_process = [selected_patient]
 
         for pid in patients_to_process:
-            sel_times, full_times = process_single_patient(os.path.join(BASE_DIR, pid), pid)
+            sel_times, full_times = process_single_patient(os.path.join(BASE_DIR, pid), pid, st.session_state.keys)
             all_selective_times.extend(sel_times)
             all_full_times.extend(full_times)
 
